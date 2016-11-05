@@ -1,0 +1,6 @@
+#!/bin/bash
+
+cd wiringPi
+make -j4 && sudo make install
+cd gpio
+make && sudo make install
