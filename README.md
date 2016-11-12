@@ -1,10 +1,10 @@
 <snippet>
-# RPi3 Status LED's}
+# RPi3 Status LED's
 Uses the Raspberry Pi's (40-pin) GPIO to drive a few LED's for real-time status
 updates on the progress of BOINC work units.
 ## Installation
-make wp
-make
+`make wp`
+`make`
 
 Then copy the status-leds binary wherever you like. No config, no parameters.
 ## Usage
