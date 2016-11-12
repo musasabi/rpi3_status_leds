@@ -69,7 +69,7 @@ void BOINCData::update_leds()
   uint32_t number_leds_to_light = 6 * average_progress;
 
   led->turn_off_boinc_pins();
-  this_thread::sleep_for(chrono::milliseconds(100));
+  this_thread::sleep_for(chrono::milliseconds(250));
   led->turn_on_boinc_pins(number_leds_to_light);
 }
 

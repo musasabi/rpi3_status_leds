@@ -4,14 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-#define MAX_NET_PINS 2
-#define MAX_CPU_PINS 4
-#define MAX_BOINC_PINS 6
-
-enum led_pins {
-                net_led_1, net_led_2,
-                cpu_led_1, cpu_led_2, cpu_led_3, cpu_led_4
-              };
+enum led_group { NET_LED, CPU_LED, BOINC_LED };
 
 class LEDControl
 {
@@ -19,21 +12,16 @@ class LEDControl
     LEDControl();
     ~LEDControl();
 
-    void turn_on(uint32_t pin);
-    void turn_off(uint32_t pin);
+    void turn_on(uint32_t pin, led_group group);
+    void turn_off(uint32_t pin, led_group group);
 
     void turn_off_boinc_pins();
     void turn_on_boinc_pins(uint32_t number);
 
   private:
-    std::vector<uint32_t> pins = {
-                                   17, 18,                 //network LED's
-                                   27, 22, 23, 24          //CPU LED's
-                                 };
-
-    std::vector<uint32_t> boinc_pins = {
-                                         25, 4, 28, 29, 30, 31
-                                       };
+    std::vector<uint32_t> net_pins   = { 17, 18 };
+    std::vector<uint32_t> cpu_pins   = { 27, 22, 23, 24 };
+    std::vector<uint32_t> boinc_pins = { 21, 20, 16, 26, 19, 13 };
 };
 
 #endif //__LED_CONTROL_H__

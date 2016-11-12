@@ -44,11 +44,11 @@ void NetworkData::display()
 
 void NetworkData::update_leds()
 {
-  if(hosts_reached[serverpi]) led->turn_on(net_led_1);
-  else led->turn_off(net_led_1);
-
-  if(hosts_reached[eah]) led->turn_on(net_led_2);
-  else led->turn_off(net_led_2);
+  for(uint32_t host = 0; host < MAX_HOSTS; host++)
+  {
+    if(hosts_reached[host]) led->turn_on(host, NET_LED);
+    else led->turn_off(host, NET_LED);
+  }
 }
 
 bool NetworkData::ping(string host)

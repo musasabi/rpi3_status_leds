@@ -52,23 +52,11 @@ void CPUData::update()
 
 void CPUData::update_leds()
 {
-  if(cpu_utilization.size() < 4)
+  for(uint32_t core = 0; core < cores; core++)
   {
-    cerr << "Less than four cores. Not touching LED's" << endl;
-    return;
+    if(cpu_utilization[core] > 25) led->turn_on(core, CPU_LED);
+    else led->turn_off(core, CPU_LED);
   }
-
-  if(cpu_utilization[0] > 25) led->turn_on(cpu_led_1);
-  else led->turn_off(cpu_led_1);
-
-  if(cpu_utilization[1] > 25) led->turn_on(cpu_led_2);
-  else led->turn_off(cpu_led_2);
-
-  if(cpu_utilization[2] > 25) led->turn_on(cpu_led_3);
-  else led->turn_off(cpu_led_3);
-
-  if(cpu_utilization[3] > 25) led->turn_on(cpu_led_4);
-  else led->turn_off(cpu_led_4);
 }
 
 void CPUData::display()
