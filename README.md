@@ -24,7 +24,7 @@ guide helped me: http://pinout.xyz/
 2016-11-12: Ping is hanging after a while. What's going on?
 
 ## History
-**2016-11-12**: Initial commitChanged how LED's are managed and re-assigned the
+**2016-11-12**: Changed how LED's are managed and re-assigned the
   BOINC pins.
 
 **2016-11-05**: Initial commit
