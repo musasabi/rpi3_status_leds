@@ -10,6 +10,7 @@
 #include <chrono>
 
 using namespace std;
+
 BOINCData::BOINCData(LEDControl *led_control)
 {
   led = led_control;

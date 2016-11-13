@@ -21,11 +21,13 @@ If you're looking for help on which pin corresponds with which number, this
 guide helped me: http://pinout.xyz/
 
 ## TODO
-2016-11-12: Ping is hanging after a while. What's going on?
+2016-11-13: I fixed ping, but now it just waits if I take down serverpi's wifi
 
 ## History
-**2016-11-12**: Changed how LED's are managed and re-assigned the
+**2016-11-13:** Swapped out ping for a simpler one, adding in checks
+
+**2016-11-12:** Changed how LED's are managed and re-assigned the
   BOINC pins.
 
-**2016-11-05**: Initial commit
+**2016-11-05:** Initial commit
 </snippet>

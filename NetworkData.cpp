@@ -1,18 +1,25 @@
 #include "NetworkData.h"
 #include "LEDControl.h"
 
-#include <netinet/in.h>
-#include <linux/ip.h>
-#include <linux/icmp.h>
-#include <arpa/inet.h>
-#include <iostream>
-#include <cstdlib>
-#include <ctime>
-#include <cstring>
-#include <unistd.h>
+#include <fcntl.h>
+#include <cerrno>
+#include <sys/socket.h>
+#include <resolv.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <netinet/ip_icmp.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <cstring>
+#include <iostream>
 
 using namespace std;
+
+struct packet
+{
+    struct icmphdr header;
+    char msg[PACKETSIZE-sizeof(struct icmphdr)];
+};
 
 NetworkData::NetworkData(LEDControl *led_control)
 {
@@ -53,145 +60,106 @@ void NetworkData::update_leds()
 
 bool NetworkData::ping(string host)
 {
-  int sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-  if(sock < 0)
-  {
-    cerr << "Failed to create socket!" << endl;
-    close(sock);
-    return false;
-  }
+  int pid = getpid();
+  struct protoent *proto = getprotobyname("ICMP");
 
-  sockaddr_in pingaddr;
-  memset(&pingaddr, 0, sizeof(sockaddr_in));
-  pingaddr.sin_family = AF_INET;
-
-  hostent *h = gethostbyname(host.c_str());
-  if(not h)
+  struct hostent *hname = gethostbyname(host.c_str());
+  if(!hname)
   {
     cerr << "Failed to get host by name for " << host << "!" << endl;
-    close(sock);
     return false;
   }
 
-  memcpy(&pingaddr.sin_addr, h->h_addr, sizeof(pingaddr.sin_addr));
+  struct sockaddr_in addr_ping,*addr;
+  memset(&addr_ping, 0, sizeof(addr_ping));
+  addr_ping.sin_family = hname->h_addrtype;
+  addr_ping.sin_port = 0;
+  addr_ping.sin_addr.s_addr = *(long*)hname->h_addr;
 
-  // Set the ID of the sender (will go into the ID of the echo msg)
-  int pid = getpid();
+  addr = &addr_ping;
 
-  // Only want to receive the following messages
-  icmp_filter filter;
-  filter.data = ~((1<<ICMP_DEST_UNREACH) |
-                  (1<<ICMP_ECHOREPLY));
-  if(setsockopt(sock, SOL_RAW, ICMP_FILTER, (char *)&filter, sizeof(filter))
-     < 0)
+  int sd = socket(PF_INET, SOCK_RAW, proto->p_proto);
+  if(sd < 0)
   {
-    perror("setsockopt(ICMP_FILTER)");
-    close(sock);
+    cerr << "Could not create socket." << endl;
     return false;
   }
 
-  // Send the packet
-  char packet[sizeof(icmphdr)];
-  memset(packet, 0, sizeof(packet));
-
-  icmphdr *pkt = (icmphdr *)packet;
-  pkt->type = ICMP_ECHO;
-  pkt->code = 0;
-  pkt->checksum = 0;
-  pkt->un.echo.id = htons(pid & 0xFFFF);
-  pkt->un.echo.sequence = 0;
-  pkt->checksum = checksum((uint16_t *)pkt, sizeof(packet));
-
-  int bytes = sendto(sock, packet, sizeof(packet), 0, (sockaddr *)&pingaddr,
-                     sizeof(sockaddr_in));
-  if(bytes < 0)
+  const int val=255;
+  if(setsockopt(sd, SOL_IP, IP_TTL, &val, sizeof(val)) != 0)
   {
-    cerr << "Failed to send to receiver" << endl;
-    close(sock);
-    return false;
-  }
-  else if(bytes != sizeof(packet))
-  {
-    cerr << "Failed to write the whole packet." << endl;
-    close(sock);
+    cerr << "Could not set socket options." << endl;
+    close(sd);
     return false;
   }
 
-  while(true)
+  if(fcntl(sd, F_SETFL, O_NONBLOCK) != 0)
   {
-    char inbuf[192];
-    memset(inbuf, 0, sizeof(inbuf));
-    int addrlen = sizeof(sockaddr_in);
+    cerr << "Error requesting nonblocking I/O" << endl;
+    close(sd);
+    return false;
+  }
 
-    memset(&pingaddr, 0, sizeof(sockaddr_in));
-    pingaddr.sin_family = AF_INET;
+  int cnt = 1;
+  struct packet pckt;
+  struct sockaddr_in r_addr;
 
-    hostent *h = gethostbyname(host.c_str());
-    if(not h)
+  for(int loop=0;loop < 5; loop++)
+  {
+    socklen_t len = sizeof(r_addr);
+
+    if(recvfrom(sd, &pckt, sizeof(pckt), 0,
+       (struct sockaddr*)&r_addr, &len) > 0)
     {
-      cerr << "Failed to get host by name!" << endl;
-      close(sock);
+      close(sd);
+      return true;
+    }
+
+    memset(&pckt, 0, sizeof(pckt));
+    pckt.header.type = ICMP_ECHO;
+    pckt.header.un.echo.id = pid;
+
+    int i;
+
+    for(i = 0; i < (int) sizeof(pckt.msg)-1; i++)
+    {
+      pckt.msg[i] = i+'0';
+    }
+
+    pckt.msg[i] = 0;
+    pckt.header.un.echo.sequence = cnt++;
+    pckt.header.checksum = checksum(&pckt, sizeof(pckt));
+
+    if(sendto(sd, &pckt, sizeof(pckt), 0,
+       (struct sockaddr*)addr, sizeof(*addr)) <= 0)
+    {
+      cerr << "sendto failed" << endl;
       return false;
     }
 
-    bytes = recvfrom(sock, inbuf, sizeof(inbuf), 0, (sockaddr *)&pingaddr,
-                     (socklen_t *)&addrlen);
-    if(bytes < 0)
-    {
-      cerr << "Error on recvfrom" << endl;
-      close(sock);
-      return false;
-    }
-    else
-    {
-      if(bytes < (int) (sizeof(iphdr) + sizeof(icmphdr)))
-      {
-        cerr << "Incorrect read bytes!" << endl;
-        continue;
-      }
-
-      iphdr *iph = (iphdr *)inbuf;
-      int hlen = (iph->ihl << 2);
-      bytes -= hlen;
-
-      pkt = (icmphdr *)(inbuf + hlen);
-      if(pkt->type == ICMP_ECHOREPLY)
-      {
-//        cout << "ICMP_ECHOREPLY" << endl;
-        return true;
-      }
-      else if(pkt->type == ICMP_DEST_UNREACH)
-      {
-        cerr << "ICMP_DEST_UNREACH" << endl;
-        return false;
-      }
-      else return false;
-    }
+    usleep(300000);
   }
+
+  close(sd);
+  return false;
 }
 
-int32_t NetworkData::checksum(uint16_t *buf, int32_t len)
+uint16_t NetworkData::checksum(void *b, int32_t len)
 {
-  int32_t nleft = len;
-  int32_t sum = 0;
-  uint16_t *w = buf;
-  uint16_t answer = 0;
+  unsigned short *buf = (short unsigned int *) b;
+  unsigned int sum=0;
+  unsigned short result;
 
-  while(nleft > 1)
+  for(sum = 0; len > 1; len -= 2)
   {
-    sum += *w++;
-    nleft -= 2;
+    sum += *buf++;
   }
 
-  if(nleft == 1)
-  {
-    *(uint16_t *)(&answer) = *(uint8_t *)w;
-    sum += answer;
-  }
-
+  if(len == 1) sum += *(unsigned char*)buf;
+ 
   sum = (sum >> 16) + (sum & 0xFFFF);
   sum += (sum >> 16);
-  answer = ~sum;
+  result = ~sum;
 
-  return answer;
+  return result;
 }

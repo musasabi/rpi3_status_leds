@@ -9,6 +9,9 @@
 #include <csignal>
 #include <cstring>
 
+#include <iomanip>
+#include <ctime>
+
 using namespace std;
 
 //necessary globals for signal handling
@@ -38,12 +41,27 @@ int main()
   BOINCData boinc_data(&led_control);
   NetworkData network_data(&led_control);
 
+uint64_t update = 0;
+
   while(!done)
   {
     this_thread::sleep_for(chrono::seconds(5));
-    cpu_data.update();
-    boinc_data.update();
+
+char timestamp[64];
+time_t rawtime;
+struct tm * timeinfo;
+time (&rawtime);
+timeinfo = localtime (&rawtime);
+strftime(timestamp, sizeof(timestamp), "%Y%m%d %H:%M:%S", timeinfo);
+cout << timestamp << endl;
+
+update++;
+cout << "  net " << update << endl;
     network_data.update();
+cout << "  cpu " << update << endl;
+    cpu_data.update();
+cout << "  boinc " << update << endl;
+    boinc_data.update();
   }
 
   return 0;

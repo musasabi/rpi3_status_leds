@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 
+#define PACKETSIZE  64
 #define MAX_HOSTS 2
 
 class LEDControl;
@@ -28,7 +29,7 @@ class NetworkData
     bool hosts_reached[MAX_HOSTS];
 
     bool ping(std::string host);
-    int32_t checksum(uint16_t *buf, int32_t len);
+    uint16_t checksum(void *buf, int32_t len);
 
     void update_leds();
 };
