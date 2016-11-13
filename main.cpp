@@ -41,27 +41,34 @@ int main()
   BOINCData boinc_data(&led_control);
   NetworkData network_data(&led_control);
 
-uint64_t update = 0;
+  uint64_t update = 0;
 
   while(!done)
   {
     this_thread::sleep_for(chrono::seconds(5));
 
-char timestamp[64];
-time_t rawtime;
-struct tm * timeinfo;
-time (&rawtime);
-timeinfo = localtime (&rawtime);
-strftime(timestamp, sizeof(timestamp), "%Y%m%d %H:%M:%S", timeinfo);
-cout << timestamp << endl;
+    //timestamp for logs
+    char timestamp[64];
+    time_t rawtime;
+    struct tm * timeinfo;
+    time (&rawtime);
+    timeinfo = localtime (&rawtime);
+    strftime(timestamp, sizeof(timestamp), "%Y%m%d %H:%M:%S", timeinfo);
+    cout << timestamp << endl;
 
-update++;
-cout << "  net " << update << endl;
+    update++;
+
+    cout << "  net " << update << endl;
     network_data.update();
-cout << "  cpu " << update << endl;
+    network_data.display();
+
+    cout << "  cpu " << update << endl;
     cpu_data.update();
-cout << "  boinc " << update << endl;
+    cpu_data.display();
+
+    cout << "  boinc " << update << endl;
     boinc_data.update();
+    boinc_data.display();
   }
 
   return 0;

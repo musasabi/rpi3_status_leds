@@ -1,7 +1,8 @@
 <snippet>
 # RPi3 Status LED's
 Uses the Raspberry Pi's (40-pin) GPIO to drive a few LED's for real-time status
-updates on the progress of BOINC work units.
+updates on the progress of BOINC work units. This project uses the wiringPi
+library: http://wiringpi.com/
 
 ## Installation
 `$ make wp` - This builds the wiringPi library and related utilities
